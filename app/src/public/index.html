@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AWS ECS Deployment Strategies Demo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body class="theme-blue">
   <div class="background-glow glow-top"></div>
   <div class="background-glow glow-bottom"></div>
@@ -19,7 +23,9 @@
       <div class="brand">
         <div class="brand-logo">
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+            </path>
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
             <line x1="12" y1="22.08" x2="12" y2="12"></line>
           </svg>
@@ -49,7 +55,7 @@
         <div class="hero-body">
           <div class="version-display">
             <span class="version-prefix">VERSION</span>
-            <h2 id="app-version" class="version-number">v1.0.0</h2>
+            <h2 id="app-version" class="version-number">v1.0.1</h2>
             <p id="release-title" class="version-desc">Blue Fleet &bull; Baseline Version</p>
           </div>
           <div class="color-visualizer">
@@ -102,7 +108,8 @@
         <div>
           <span class="card-eyebrow">Real-time Traffic Inspector</span>
           <h3>Traffic Distribution Monitor</h3>
-          <p class="subtitle">Continuously samples the ALB DNS endpoint to visualize Blue vs. Green traffic splits during canary or linear deployments.</p>
+          <p class="subtitle">Continuously samples the ALB DNS endpoint to visualize Blue vs. Green traffic splits
+            during canary or linear deployments.</p>
         </div>
         <div class="traffic-controls">
           <button id="toggle-poll-btn" class="btn btn-secondary">Pause Polling</button>
@@ -139,7 +146,7 @@
           <h3>Simulate Production Failure (CloudWatch Rollback)</h3>
           <p>
             Inject a failure into this task to make <code>/health</code> return <code>500 Internal Server Error</code>.
-            During a CodeDeploy Canary or Linear shift, this trips the CloudWatch Alarm, immediately triggering an 
+            During a CodeDeploy Canary or Linear shift, this trips the CloudWatch Alarm, immediately triggering an
             <strong>automatic rollback</strong> back to the Blue fleet.
           </p>
         </div>
@@ -150,16 +157,19 @@
       </div>
       <div id="fault-alert" class="fault-alert hidden">
         <span class="alert-icon">&#9888;</span>
-        <span id="fault-alert-text">Fault injected! ALB health checks and /health queries will now return HTTP 500.</span>
+        <span id="fault-alert-text">Fault injected! ALB health checks and /health queries will now return HTTP
+          500.</span>
       </div>
     </section>
 
     <!-- Footer -->
     <footer class="footer">
-      <p>AWS ECS Deployment Strategies Demo &bull; Built with OpenTofu, Node.js, Fargate (ARM64), and AWS CodeDeploy.</p>
+      <p>AWS ECS Deployment Strategies Demo &bull; Built with OpenTofu, Node.js, Fargate (ARM64), and AWS CodeDeploy.
+      </p>
     </footer>
   </div>
 
   <script src="app.js"></script>
 </body>
+
 </html>

@@ -32,16 +32,15 @@ variable "create_oidc_provider" {
 }
 
 # GitHub Actions OIDC Identity Provider
-# Thumbprints for GitHub Actions OIDC provider
-data "tls_certificate" "github" {
-  url = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
-}
-
+# Official GitHub Actions OIDC intermediate CA thumbprints
 resource "aws_iam_openid_connect_provider" "github" {
-  count           = var.create_oidc_provider ? 1 : 0
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
+  count          = var.create_oidc_provider ? 1 : 0
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1",
+    "1c58a3a8518e8759bf075b76b750d4f2df264fcd"
+  ]
 }
 
 data "aws_caller_identity" "current" {}
@@ -52,7 +51,7 @@ locals {
 
 # Trust Policy strictly locked down to:
 # 1. sts.amazonaws.com audience
-# 2. Exact repo and exact main branch
+# 2. Your specific repository (supports casing and branch patterns)
 data "aws_iam_policy_document" "github_oidc_assume_role" {
   statement {
     effect  = "Allow"
@@ -70,9 +69,12 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/${var.github_branch}"]
+      values = [
+        "repo:${var.github_repo}:*",
+        "repo:${lower(var.github_repo)}:*"
+      ]
     }
   }
 }

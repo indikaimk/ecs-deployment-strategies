@@ -1,0 +1,23 @@
+variable "aws_region" {
+  description = "AWS Region"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "demo"
+}
+
+variable "desired_count" {
+  description = "Desired number of ECS tasks"
+  type        = number
+  default     = 2
+}
+
+variable "canary_config_name" {
+  description = "CodeDeploy Canary deployment configuration"
+  type        = string
+  default     = "CodeDeployDefault.ECSCanary10Percent5Minutes"
+}

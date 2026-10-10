@@ -1,0 +1,114 @@
+name: CI - Build and Push (Graviton ARM64)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ci-build-push.yml'
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker Image Tag (e.g. v1.0.0, v2.0.0)'
+        required: true
+        default: 'v2.0.0'
+      app_color:
+        description: 'App Color Theme (blue, green, amber, purple)'
+        required: true
+        default: 'green'
+      app_release_title:
+        description: 'Release Title displayed on dashboard'
+        required: true
+        default: 'Green Release (v2.0.0 Candidate)'
+
+permissions:
+  id-token: write   # Required for AWS OIDC authentication
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: ecs-deployment-demo
+
+jobs:
+  test:
+    name: Run Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install Dependencies
+        run: cd app && npm ci
+
+      - name: Run Test Suite
+        run: cd app && npm test
+
+  build-and-push:
+    name: Build & Push Graviton (linux/arm64)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup QEMU for ARM64 Emulation
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Determine Image Tags
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.image_tag || 'latest' }}"
+          SHA_TAG="sha-${{ github.sha }}"
+          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$TAG" >> $GITHUB_OUTPUT
+          echo "sha_image_uri=$ECR_REGISTRY/$ECR_REPOSITORY:$SHA_TAG" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image_uri }}
+            ${{ steps.meta.outputs.sha_image_uri }}
+          build-args: |
+            APP_VERSION=${{ github.event.inputs.image_tag || 'v1.0.0' }}
+            APP_COLOR=${{ github.event.inputs.app_color || 'green' }}
+            APP_RELEASE_TITLE=${{ github.event.inputs.app_release_title || 'Green Release' }}
+
+      - name: Deployment Instructions
+        run: |
+          echo "=========================================================="
+          echo "Successfully pushed ARM64 Graviton container image to ECR!"
+          echo "Image URI: ${{ steps.meta.outputs.image_uri }}"
+          echo "Now trigger any of the deployment workflows to test strategies:"
+          echo "  - deploy-rolling.yml"
+          echo "  - deploy-blue-green.yml"
+          echo "  - deploy-canary.yml"
+          echo "  - deploy-linear.yml"
+          echo "=========================================================="

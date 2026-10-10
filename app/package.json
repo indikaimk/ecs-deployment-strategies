@@ -1,0 +1,25 @@
+{
+  "name": "ecs-deployment-demo",
+  "version": "1.0.0",
+  "description": "Visual Node.js demo app for AWS ECS deployment strategies (Rolling, Blue/Green, Canary, Linear)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/server.test.js"
+  },
+  "keywords": [
+    "aws",
+    "ecs",
+    "fargate",
+    "graviton",
+    "codedeploy",
+    "blue-green",
+    "canary"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

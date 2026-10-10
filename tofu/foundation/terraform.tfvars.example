@@ -1,0 +1,5 @@
+aws_region         = "us-east-1"
+environment        = "demo"
+github_repo        = "your-username/ecs-deployment-strategies"
+github_branch      = "main"
+enable_nat_gateway = false

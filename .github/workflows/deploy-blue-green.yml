@@ -1,0 +1,101 @@
+name: Deploy - Native Blue/Green
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag in ECR to deploy'
+        required: true
+        default: 'latest'
+      app_version:
+        description: 'Version string (displayed on UI)'
+        required: true
+        default: 'v2.0.0'
+      app_color:
+        description: 'UI theme color (green, emerald, purple)'
+        required: true
+        default: 'green'
+      app_release_title:
+        description: 'Release title'
+        required: true
+        default: 'Green Fleet - v2.0.0 (Blue/Green Cutover)'
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  CLUSTER_NAME: ecs-demo-demo-cluster
+  SERVICE_NAME: demo-bg-service
+  TASK_FAMILY: demo-bg-app
+  ECR_REPOSITORY: ecs-deployment-demo
+
+jobs:
+  deploy-blue-green:
+    name: Execute Native ECS Blue/Green Cutover
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Fetch and Render New Task Definition Revision
+        id: render-task-def
+        run: |
+          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:${{ github.event.inputs.image_tag }}"
+
+          echo "Fetching latest active task definition for family: $TASK_FAMILY..."
+          TASK_DEF_JSON=$(aws ecs describe-task-definition --task-definition "$TASK_FAMILY" --query 'taskDefinition')
+
+          NEW_DEF=$(echo "$TASK_DEF_JSON" | jq \
+            --arg IMAGE "$IMAGE_URI" \
+            --arg VER "${{ github.event.inputs.app_version }}" \
+            --arg COLOR "${{ github.event.inputs.app_color }}" \
+            --arg TITLE "${{ github.event.inputs.app_release_title }}" \
+            '.containerDefinitions[0].image = $IMAGE |
+             .containerDefinitions[0].environment = [
+               {"name": "APP_VERSION", "value": $VER},
+               {"name": "APP_COLOR", "value": $COLOR},
+               {"name": "APP_RELEASE_TITLE", "value": $TITLE}
+             ] |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          echo "$NEW_DEF" > new-task-def.json
+
+          echo "Registering new Green task definition revision..."
+          NEW_TASK_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "Registered: $NEW_TASK_ARN"
+          echo "new_task_arn=$NEW_TASK_ARN" >> $GITHUB_OUTPUT
+
+      - name: Trigger Blue/Green Cutover
+        run: |
+          NEW_TASK_ARN="${{ steps.render-task-def.outputs.new_task_arn }}"
+          echo "Updating ECS service $SERVICE_NAME with Green task definition: $NEW_TASK_ARN..."
+
+          aws ecs update-service \
+            --cluster "$CLUSTER_NAME" \
+            --service "$SERVICE_NAME" \
+            --task-definition "$NEW_TASK_ARN"
+
+          echo "Waiting for Blue/Green service stabilization..."
+          aws ecs wait services-stable \
+            --cluster "$CLUSTER_NAME" \
+            --services "$SERVICE_NAME"
+
+          echo "=========================================================="
+          echo "Blue/Green deployment successfully finished!"
+          echo "New Version : ${{ github.event.inputs.app_version }}"
+          echo "New Color   : ${{ github.event.inputs.app_color }}"
+          echo "=========================================================="

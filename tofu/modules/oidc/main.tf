@@ -74,7 +74,8 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
       variable = "token.actions.githubusercontent.com:sub"
       values = [
         "repo:${var.github_repo}:*",
-        "repo:${lower(var.github_repo)}:*"
+        "repo:${split("/", var.github_repo)[0]}*${split("/", var.github_repo)[1]}*:*",
+        "repo:indikaimk@685241/ecs-deployment-strategies@1412586756:*"
       ]
     }
   }
